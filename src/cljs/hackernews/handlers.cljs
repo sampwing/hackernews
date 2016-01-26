@@ -33,12 +33,43 @@
 
 (re-frame/register-handler
  :process-stories
- (fn [db story-ids]
+ (fn [db [_ story-ids]]
    (prn "processing stories")
    (prn story-ids)
+   (re-frame/dispatch [:populate-stories])
    (if (empty? story-ids)
      db
-     (assoc db :stories story-ids))))
+     (assoc db :story-ids story-ids))))
+
+(re-frame/register-handler
+  :populate-stories
+  (fn [db e]
+    (prn e)
+    (prn "populating stories...")
+    (let [story-ids (take 10 (get db :story-ids))]
+      (prn story-ids)
+      (for [story-id (take 10 story-ids)]
+        (prn (str "here is : " story-id))
+        ))
+        ;(re-frame/dispatch [:load-story story-id])))
+    db))
+
+(re-frame/register-handler
+  :load-story
+  (fn [db story-id]
+    (prn "loading story")
+    (if-not (contains? db story-id)
+      ; only update stories we haven't seen before
+      (api/get- {:endpoints [:item (str story-id ".json")]
+                 :cb #(re-frame/dispatch [:process-story %])}))
+    db))
+
+(re-frame/register-handler
+  :process-story
+  (fn [db {:keys [id] :as story}]
+    (prn "processing story")
+    (prn (str "id: " id " - " story)) 
+    (assoc db id story)))
 
 (re-frame/register-handler
  :process-failure
